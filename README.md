@@ -13,10 +13,21 @@ Transforms hundreds or thousands of individual GLTF models into a single, optimi
 
 ## 📋 Prerequisites
 
+- **earth2msfs** - Download 3D map tiles from Google Earth: [Google Earth Decoder Update](https://flightsim.to/file/39900/gogole-earth-decoder-update)
 - **Blender 4.0+** (tested with Blender 5.0)
 - **PowerShell 5.1+** (Windows)
 - **Storage**: Adequate disk space for temporary files (typically 2-3x the source size)
 - **RAM**: 16GB+ recommended for large datasets
+
+## 🗺️ Getting Google Earth Tiles
+
+Before using this pipeline, you need to download 3D map tiles using **earth2msfs**:
+
+1. Download [Google Earth Decoder Update](https://flightsim.to/file/39900/gogole-earth-decoder-update)
+2. Launch the application
+3. Select your desired map area
+4. Download the 3D tiles (GLTF format)
+5. The app will export files to a folder structure compatible with this pipeline
 
 ## 🚀 Quick Start
 
