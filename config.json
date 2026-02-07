@@ -1,0 +1,71 @@
+{
+  "paths": {
+    "projectRoot": "D:\\Projects\\google_earth_export\\",
+    "blenderExecutable": "D:\\Program Files\\Blender 5.0\\blender.exe"
+  },
+  "folders": {
+    "gltfExport": "gltf_export",
+    "modelLib": "gltf_export\\modelLib",
+    "modelLibTextures": "gltf_export\\modelLib\\texture",
+    "batchFbxOutput": "gltf_export\\batch_fbx",
+    "mergedOutput": "gltf_export\\merged"
+  },
+  "scripts": {
+    "mergeGltfBatchOptimized": "merge_gltf_batch_optimized.py",
+    "mergeFinalFbx": "merge_final_fbx.py",
+    "processGltfParallel": "process_gltf_parallel.ps1",
+    "runFullPipeline": "run_full_pipeline.ps1"
+  },
+  "output": {
+    "mergedFbxName": "merged.fbx"
+  },
+  "processing": {
+    "maxParallelBlenderInstances": 32,
+    "processCheckIntervalMs": 200,
+    "defaultFilesPerBatch": 10,
+    "defaultDecimateRatio": 0.5,
+    "cleanupSubfolders": true
+  },
+  "optimization": {
+    "enableDecimation": true,
+    "enableNormalBaking": true,
+    "normalMapResolution": 2048,
+    "bakeCageExtrusion": 0.1,
+    "bakeMaxRayDistance": 1.0
+  },
+  "options": {
+    "cleanOutputFolders": false,
+    "verboseLogging": true,
+    "saveBatchLogs": true,
+    "removeHighPolyAfterBake": true
+  },
+  "quality": {
+    "presets": {
+      "ultra_high": {
+        "decimateRatio": 0.9,
+        "filesPerBatch": 5,
+        "normalMapResolution": 4096
+      },
+      "high": {
+        "decimateRatio": 0.7,
+        "filesPerBatch": 10,
+        "normalMapResolution": 2048
+      },
+      "medium": {
+        "decimateRatio": 0.5,
+        "filesPerBatch": 15,
+        "normalMapResolution": 2048
+      },
+      "low": {
+        "decimateRatio": 0.3,
+        "filesPerBatch": 20,
+        "normalMapResolution": 1024
+      },
+      "very_low": {
+        "decimateRatio": 0.1,
+        "filesPerBatch": 50,
+        "normalMapResolution": 512
+      }
+    }
+  }
+}
