@@ -1,15 +1,19 @@
-# Google Earth Export to MSFS Pipeline
+# Google Earth Export to 3ds Max Reference Pipeline
 
-Automated processing pipeline for converting Google Earth GLTF exports into optimized, merged FBX files for Microsoft Flight Simulator.
+Automated processing pipeline for converting Google Earth GLTF exports into optimized, merged FBX files for use as reference models in 3ds Max for detailed 3D map creation.
 
 ## 🎯 What This Pipeline Does
 
-Transforms hundreds or thousands of individual GLTF models into a single, optimized FBX file through:
+Transforms hundreds or thousands of individual GLTF models into a single, optimized FBX file that can be imported into 3ds Max as a reference for manual 3D modeling and map creation.
+
+The pipeline performs:
 
 1. **Texture Consolidation** - Organizes all textures into a single directory
 2. **Parallel Batch Processing** - Converts GLTF files to optimized FBX batches using multiple Blender instances
-3. **Mesh Optimization** - Decimates geometry and bakes normal maps to preserve detail
-4. **Final Merge** - Combines all batch files into a single FBX with optimized materials
+3. **Mesh Optimization** - Decimates geometry and bakes normal maps to preserve detail while reducing file size
+4. **Final Merge** - Combines all batch files into a single FBX that can be imported into 3ds Max as a reference model
+
+**Use Case**: The final merged FBX serves as an accurate 3D reference of real-world terrain and buildings, allowing you to manually create detailed, optimized 3D maps in 3ds Max.
 
 ## 📋 Prerequisites
 
@@ -95,7 +99,34 @@ D:\Projects\google_earth_export\
 │ • Joins all meshes into single object                   │
 │ • Exports final merged FBX                              │
 └─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ Import to 3ds Max                                       │
+│ • Use merged.fbx as reference model                     │
+│ • Trace/rebuild geometry with optimized topology        │
+│ • Create detailed materials and textures                │
+│ • Build game-ready or production assets                 │
+└─────────────────────────────────────────────────────────┘
 ```
+
+## 🎨 Using the Output in 3ds Max
+
+Once the pipeline completes, you'll have a `merged.fbx` file ready for 3ds Max:
+
+1. **Import as Reference**: 
+   - File → Import → Select `merged.fbx`
+   - Use as visual reference for accurate terrain and building placement
+
+2. **Manual Modeling**:
+   - Trace over the reference geometry with clean topology
+   - Create optimized LODs (Level of Detail) models
+   - Build proper UV maps for texturing
+
+3. **Benefits**:
+   - Accurate real-world proportions and locations
+   - Consolidated single-file reference (easier to manage than thousands of files)
+   - Optimized geometry won't slow down 3ds Max viewport
+   - Embedded textures provide visual context
 
 ## ⚙️ Configuration Guide
 
@@ -105,11 +136,11 @@ Use predefined quality presets for common scenarios:
 
 | Preset | Decimate Ratio | Files/Batch | Normal Map | Use Case |
 |--------|----------------|-------------|------------|----------|
-| `ultra_high` | 0.9 | 5 | 4096px | Maximum quality, slow |
-| `high` | 0.7 | 10 | 2048px | High detail, balanced |
-| `medium` | 0.5 | 15 | 2048px | **Default**, good balance |
-| `low` | 0.3 | 20 | 1024px | Faster processing |
-| `very_low` | 0.1 | 50 | 512px | Quick preview |
+| `ultra_high` | 0.9 | 5 | 4096px | High-detail reference, architectural work |
+| `high` | 0.7 | 10 | 2048px | Detailed reference, quality modeling |
+| `medium` | 0.5 | 15 | 2048px | **Default**, balanced reference |
+| `low` | 0.3 | 20 | 1024px | Quick reference, fast viewport |
+| `very_low` | 0.1 | 50 | 512px | Preview/layout only |
 
 **Example using preset values:**
 ```powershell
@@ -300,9 +331,11 @@ gltf_export\
 
 ### First Time Setup
 ```powershell
-# 1. Edit config.json with your paths
-# 2. Run full pipeline with default settings
+# 1. Download map tiles with earth2msfs
+# 2. Edit config.json with your paths
+# 3. Run full pipeline with default settings
 .\run_full_pipeline.ps1
+# 4. Import merged.fbx into 3ds Max as reference
 ```
 
 ### Re-process with Different Quality
@@ -317,15 +350,15 @@ gltf_export\
 .\run_full_pipeline.ps1 -SkipBatchProcessing -OnlyFinalMerge
 ```
 
-### Maximum Quality Export
+### Maximum Quality Reference for Architectural Work
 ```powershell
-# Ultra-high quality for final production
+# Ultra-high quality for detailed modeling reference
 .\run_full_pipeline.ps1 -FilesPerBatch 3 -DecimateRatio 0.95
 ```
 
-### Quick Preview
+### Quick Layout Reference
 ```powershell
-# Fast low-quality preview
+# Fast low-quality for viewport layout and planning
 .\run_full_pipeline.ps1 -FilesPerBatch 50 -DecimateRatio 0.1
 ```
 
@@ -342,9 +375,11 @@ gltf_export\
 ## ⚠️ Important Notes
 
 - **Backup your data**: Always keep original GLTF files
+- **Reference model**: The final FBX is meant for reference, not direct game/production use
+- **Manual modeling**: Use the merged FBX as a guide to create optimized models in 3ds Max
 - **Texture paths**: Pipeline expects textures in `modelLib` or `modelLib\texture`
 - **GLTF naming**: Files must end with `_LOD00.gltf` to be processed
-- **Embedded textures**: Final FBX embeds all textures (increases file size)
+- **Embedded textures**: Final FBX embeds all textures (increases file size but simplifies import)
 - **Progress monitoring**: Watch console for real-time progress updates
 
 ## 🤝 Support
@@ -357,4 +392,4 @@ For issues or questions:
 
 ## 📄 License
 
-This pipeline is provided as-is for processing Google Earth Studio exports.
+This pipeline is provided as-is for processing Google Earth Studio exports into 3ds Max reference models.
