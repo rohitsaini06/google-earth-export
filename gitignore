@@ -1,0 +1,12 @@
+_____________working______________/
+__pycache__/
+*.pyc
+*.pyo
+earth2msfs/
+gltf_export/
+stadium/
+test_output/
+output/
+*.fbx
+*.log
+*.err

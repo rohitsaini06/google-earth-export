@@ -242,7 +242,9 @@ Write-Host ""
 
 $step2StartTime = Get-Date
 
-# Run merge script
+# BUG FIX: was Start-Process -Wait which creates a detached process whose stdout
+# is NOT captured by the GUI's subprocess pipe. Using & (call operator) instead
+# runs Blender inline so output streams through to the GUI console in real time.
 $blenderArgs = @(
     "--background",
     "--python", $mergePythonScript,
@@ -251,13 +253,8 @@ $blenderArgs = @(
     $finalOutputFbx
 )
 
-$process = Start-Process -FilePath $blenderExe `
-                        -ArgumentList $blenderArgs `
-                        -NoNewWindow `
-                        -Wait `
-                        -PassThru
-
-$exitCode = $process.ExitCode
+& $blenderExe @blenderArgs
+$exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
     Write-Host "ERROR: Final merge failed with exit code $exitCode" -ForegroundColor Red
