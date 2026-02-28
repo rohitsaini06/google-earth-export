@@ -1,395 +1,302 @@
-# Google Earth Export to 3ds Max Reference Pipeline
+# 🌍 Google Earth → MSFS Pipeline
 
-Automated processing pipeline for converting Google Earth GLTF exports into optimized, merged FBX files for use as reference models in 3ds Max for detailed 3D map creation.
+A batch processing pipeline that converts Google Earth Studio GLTF exports into optimized FBX assets for Microsoft Flight Simulator, with a dark-themed GUI manager for configuration and execution.
 
-## 🎯 What This Pipeline Does
+---
 
-Transforms hundreds or thousands of individual GLTF models into a single, optimized FBX file that can be imported into 3ds Max as a reference for manual 3D modeling and map creation.
+## Overview
 
-The pipeline performs:
+Google Earth Studio can export 3D city/terrain captures as GLTF files, but MSFS requires optimized FBX. This pipeline automates the full conversion:
 
-1. **Texture Consolidation** - Organizes all textures into a single directory
-2. **Parallel Batch Processing** - Converts GLTF files to optimized FBX batches using multiple Blender instances
-3. **Mesh Optimization** - Decimates geometry and bakes normal maps to preserve detail while reducing file size
-4. **Final Merge** - Combines all batch files into a single FBX that can be imported into 3ds Max as a reference model
-
-**Use Case**: The final merged FBX serves as an accurate 3D reference of real-world terrain and buildings, allowing you to manually create detailed, optimized 3D maps in 3ds Max.
-
-## 📋 Prerequisites
-
-- **earth2msfs** - Download 3D map tiles from Google Earth: [Google Earth Decoder Update](https://flightsim.to/file/39900/gogole-earth-decoder-update)
-- **Blender 4.0+** (tested with Blender 5.0)
-- **PowerShell 5.1+** (Windows)
-- **Storage**: Adequate disk space for temporary files (typically 2-3x the source size)
-- **RAM**: 16GB+ recommended for large datasets
-
-## 🗺️ Getting Google Earth Tiles
-
-Before using this pipeline, you need to download 3D map tiles using **earth2msfs**:
-
-1. Download [Google Earth Decoder Update](https://flightsim.to/file/39900/gogole-earth-decoder-update)
-2. Launch the application
-3. Select your desired map area
-4. Download the 3D tiles (GLTF format)
-5. The app will export files to a folder structure compatible with this pipeline
-
-## 🚀 Quick Start
-
-### 1. Configure Paths
-
-Edit `config.json` and update these paths:
-
-```json
-{
-  "paths": {
-    "projectRoot": "D:\\Projects\\google_earth_export\\",
-    "blenderExecutable": "D:\\Program Files\\Blender 5.0\\blender.exe"
-  }
-}
+```
+GLTF exports  →  Batch decimation & normal baking  →  Batch FBX files  →  Single merged FBX
+     (raw)              (Blender, parallel)                                    (MSFS-ready)
 ```
 
-### 2. Organize Your Files
+Each stage runs inside Blender headlessly. The GUI wraps the entire workflow so you never need to touch a terminal.
 
-Place your Google Earth export in this structure:
+---
+
+## Project Structure
+
+```
+google_earth_export/
+│
+├── pipeline_manager.py          # GUI application — run this
+├── config.json                  # All pipeline settings (auto-saved by GUI)
+│
+├── run_full_pipeline.ps1        # Master orchestrator (Step 0.5 → 1 → 2)
+├── process_gltf_parallel.ps1   # Step 1: parallel Blender batch jobs
+│
+├── merge_gltf_batch_optimized.py  # Blender script: decimate + bake per batch
+├── merge_final_fbx.py             # Blender script: merge all batch FBX → one
+│
+└── gltf_export/
+    ├── modelLib/                # Input: your GLTF files (*_LOD00.gltf)
+    │   └── texture/             # Input: diffuse textures (.png / .jpg)
+    ├── batch_fbx/               # Intermediate: one FBX per batch + logs
+    └── merged/
+        └── merged.fbx           # Final output
+```
+
+---
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| Windows | 10 or 11 (64-bit) |
+| Python | 3.8+ |
+| Blender | 4.x or 5.x |
+| PowerShell | 5.1+ (included in Windows) |
+
+> **No extra Python packages needed.** The GUI uses only the standard library (`tkinter`, `subprocess`, `threading`, `json`).
+
+---
+
+## Quick Start
+
+### 1. Place your files
+
+Copy all pipeline scripts into your project root (the same folder as `config.json`):
 
 ```
 D:\Projects\google_earth_export\
-└── gltf_export\
-    └── modelLib\
-        ├── model_001_LOD00.gltf
-        ├── model_002_LOD00.gltf
-        ├── ...
-        └── texture\
-            ├── texture_001.png
-            ├── texture_002.jpg
-            └── ...
+├── pipeline_manager.py
+├── config.json
+├── run_full_pipeline.ps1
+├── process_gltf_parallel.ps1
+├── merge_gltf_batch_optimized.py
+└── merge_final_fbx.py
 ```
 
-### 3. Run the Pipeline
+Put your Google Earth Studio GLTF exports in:
+```
+gltf_export\modelLib\          ← *_LOD00.gltf files go here
+gltf_export\modelLib\texture\  ← corresponding textures go here
+```
+
+### 2. Launch the GUI
 
 ```powershell
-.\run_full_pipeline.ps1 -FilesPerBatch 10 -DecimateRatio 0.5
+python pipeline_manager.py
 ```
 
-## 📊 Pipeline Workflow
+### 3. Configure paths
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Step 0.5: Texture Consolidation                         │
-│ • Moves textures from subfolders to modelLib root       │
-│ • Handles duplicate detection (MD5 hash)                │
-│ • Renames conflicts automatically                       │
-│ • Cleans empty directories                              │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│ Step 1: Parallel Batch Processing                       │
-│ • Groups GLTF files into batches                        │
-│ • Runs multiple Blender instances simultaneously        │
-│ • Each batch: GLTF → Optimized FBX                      │
-│ • Applies mesh decimation                               │
-│ • Bakes normal maps from high-poly geometry             │
-│ • Embeds textures in FBX files                          │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│ Step 2: Final Merge                                     │
-│ • Imports all batch FBX files                           │
-│ • Removes duplicate materials                           │
-│ • Joins all meshes into single object                   │
-│ • Exports final merged FBX                              │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│ Import to 3ds Max                                       │
-│ • Use merged.fbx as reference model                     │
-│ • Trace/rebuild geometry with optimized topology        │
-│ • Create detailed materials and textures                │
-│ • Build game-ready or production assets                 │
-└─────────────────────────────────────────────────────────┘
-```
+In the **Configuration** tab:
+- Set **Project Root** to your project folder (e.g. `D:\Projects\google_earth_export\`)
+- Set **Blender Executable** to your Blender install (e.g. `D:\Program Files\Blender 5.0\blender.exe`)
+- Click **Save** in the top bar
 
-## 🎨 Using the Output in 3ds Max
+### 4. Run the pipeline
 
-Once the pipeline completes, you'll have a `merged.fbx` file ready for 3ds Max:
+Switch to the **Pipeline Runner** tab and click **▶ Run Pipeline**.
 
-1. **Import as Reference**: 
-   - File → Import → Select `merged.fbx`
-   - Use as visual reference for accurate terrain and building placement
+---
 
-2. **Manual Modeling**:
-   - Trace over the reference geometry with clean topology
-   - Create optimized LODs (Level of Detail) models
-   - Build proper UV maps for texturing
+## Pipeline Stages
 
-3. **Benefits**:
-   - Accurate real-world proportions and locations
-   - Consolidated single-file reference (easier to manage than thousands of files)
-   - Optimized geometry won't slow down 3ds Max viewport
-   - Embedded textures provide visual context
+### Step 0.5 — Texture Consolidation
+Scans `modelLib\texture\` and moves all texture files up to `modelLib\`. Identical duplicates (MD5-matched) are removed; conflicting filenames are auto-renamed `filename_1.png`, `filename_2.png`, etc. Optionally removes the now-empty `texture\` subdirectory.
 
-## ⚙️ Configuration Guide
+### Step 1 — Parallel Batch Processing (`process_gltf_parallel.ps1`)
+- Finds all `*_LOD00.gltf` files in `modelLib\`
+- Splits them into batches (default: 10 files per batch)
+- Launches up to N Blender instances in parallel (default: 32)
+- Each Blender instance runs `merge_gltf_batch_optimized.py`:
+  - Imports all GLTF files in the batch
+  - Applies **mesh decimation** (reduces polygon count by the decimate ratio)
+  - Bakes **normal maps** from high-poly → low-poly using Cycles
+  - Joins all meshes and exports as `batch_XXXX.fbx`
+- Stdout and stderr for each batch are saved as `.log` / `.err` files
 
-### Quality Presets
+### Step 2 — Final Merge (`merge_final_fbx.py`)
+- Imports all `batch_*.fbx` files from the batch output folder
+- Deduplicates materials by name
+- Joins everything into a single mesh object
+- Exports as `merged.fbx` with embedded textures
 
-Use predefined quality presets for common scenarios:
+---
 
-| Preset | Decimate Ratio | Files/Batch | Normal Map | Use Case |
-|--------|----------------|-------------|------------|----------|
-| `ultra_high` | 0.9 | 5 | 4096px | High-detail reference, architectural work |
-| `high` | 0.7 | 10 | 2048px | Detailed reference, quality modeling |
-| `medium` | 0.5 | 15 | 2048px | **Default**, balanced reference |
-| `low` | 0.3 | 20 | 1024px | Quick reference, fast viewport |
-| `very_low` | 0.1 | 50 | 512px | Preview/layout only |
+## GUI Reference
 
-**Example using preset values:**
-```powershell
-.\run_full_pipeline.ps1 -FilesPerBatch 5 -DecimateRatio 0.9  # Ultra high quality
-```
+### ⚙️ Configuration Tab
 
-### Key Parameters
+All fields map directly to `config.json`. Changes are auto-saved when you click **Run Pipeline**, or manually with the **Save** button.
 
-#### Files Per Batch (`-FilesPerBatch`)
-- **Default**: 10
-- **Range**: 1-100
-- **Impact**: 
-  - Lower = More batches, less memory per process
-  - Higher = Fewer batches, faster total time, more memory
+| Section | Key Settings |
+|---|---|
+| **Paths** | Project root directory, Blender executable path |
+| **Folders** | Relative paths for each pipeline stage's input/output |
+| **Scripts** | Filenames of the PowerShell and Python scripts |
+| **Processing** | Parallel instances, batch size, decimate ratio, check interval |
+| **Optimization** | Enable/disable decimation and normal baking, map resolution, bake cage settings |
+| **Options** | Clean output folders, verbose logging, save batch logs, remove high-poly after bake |
+| **Quality Presets** | Editable preset table (Ultra High → Very Low) |
 
-#### Decimate Ratio (`-DecimateRatio`)
-- **Default**: 0.5 (50% of original geometry)
-- **Range**: 0.1-1.0
-- **Impact**:
-  - 1.0 = No decimation (original geometry)
-  - 0.5 = Half the polygons
-  - 0.1 = 10% of polygons (aggressive)
+### 🚀 Pipeline Runner Tab
 
-#### Max Parallel Instances
-- **Default**: 32
-- **Set in**: `config.json` → `processing.maxParallelBlenderInstances`
-- **Recommendation**: Number of CPU cores × 2
+**Run options** (map to PowerShell switches):
 
-## 🔧 Advanced Usage
+| Checkbox | PowerShell Flag | Effect |
+|---|---|---|
+| Skip Batch Processing | `-SkipBatchProcessing` | Skips Step 1; uses existing batch FBX files |
+| Skip Texture Consolidation | `-SkipTextureConsolidation` | Skips Step 0.5 |
+| Only Final Merge | `-OnlyFinalMerge` | Runs Step 2 only |
 
-### Skip Steps
+**Override fields** — leave blank to use config defaults, or enter values to override for this run only:
+- **Files/Batch** — how many GLTF files per Blender instance
+- **Decimate** — polygon reduction ratio (0.0–1.0)
 
-```powershell
-# Use existing batch files, only run final merge
-.\run_full_pipeline.ps1 -SkipBatchProcessing
+**Quick Preset buttons** — fill in the override fields from a named quality preset instantly.
 
-# Skip texture consolidation (textures already organized)
-.\run_full_pipeline.ps1 -SkipTextureConsolidation
+**Console** — live-streamed output with color coding:
 
-# Only run final merge (skip Steps 0.5 and 1)
-.\run_full_pipeline.ps1 -OnlyFinalMerge
-```
+| Color | Meaning |
+|---|---|
+| 🟢 Green | Completion / success messages |
+| 🔵 Blue | Step headers / progress info |
+| 🟡 Yellow | Warnings / skipped files |
+| 🔴 Red | Errors / failed imports |
+| 🟣 Purple | Section separators |
+| Gray | Timestamps |
 
-### Clean Output Folders
+**Stop** — sends `taskkill /F /T` to terminate the PowerShell process and all child Blender processes.
 
-Enable in `config.json`:
-```json
-{
-  "options": {
-    "cleanOutputFolders": true
-  }
-}
-```
+**Save Log** — exports the full console contents to a `.txt` file.
 
-This deletes previous batch and merged files before processing.
+### 📊 Batch Monitor Tab
 
-### Custom Quality Settings
+Watches the `batch_fbx\` output directory while the pipeline runs. Shows a live file table with size, modification time, and status badge (✅ FBX / 📋 Log / ⚠ Error). Summary stat cards display total files, FBX count, log count, error count, and total size on disk.
 
-Directly specify optimization parameters:
+Click **▶ Watch** to auto-refresh every 3 seconds, or **↻ Refresh** for a one-shot update.
 
-```powershell
-# Maximum quality preservation
-.\run_full_pipeline.ps1 -DecimateRatio 0.95 -FilesPerBatch 3
+---
 
-# Fast preview processing
-.\run_full_pipeline.ps1 -DecimateRatio 0.1 -FilesPerBatch 50
-```
+## Quality Presets
 
-## 📁 Output Structure
+| Preset | Decimate Ratio | Files / Batch | Normal Map Res |
+|---|---|---|---|
+| Ultra High | 0.9 | 5 | 4096 × 4096 |
+| High | 0.7 | 10 | 2048 × 2048 |
+| Medium *(default)* | 0.5 | 15 | 2048 × 2048 |
+| Low | 0.3 | 20 | 1024 × 1024 |
+| Very Low | 0.1 | 50 | 512 × 512 |
 
-```
-gltf_export\
-├── batch_fbx\               # Step 1 output
-│   ├── batch_0001.fbx
-│   ├── batch_0002.fbx
-│   ├── batch_0001.log      # Process logs
-│   └── ...
-└── merged\                  # Final output
-    └── merged.fbx          # Final merged file
-```
+Higher decimate ratios preserve more geometry but produce larger files and take longer to process. Lower ratios are faster and produce smaller FBX files at the cost of mesh detail.
 
-## 🎨 Optimization Features
+---
 
-### Mesh Decimation
-- Reduces polygon count while preserving shape
-- Ratio of 0.5 = 50% fewer polygons
-- Applied before normal baking
+## Configuration Reference (`config.json`)
 
-### Normal Map Baking
-- **Purpose**: Preserve high-poly detail on low-poly mesh
-- **Resolution**: 2048×2048 (configurable)
-- **Process**:
-  1. Original mesh saved as high-poly reference
-  2. Mesh decimated to target ratio
-  3. Normal map baked from high-poly to low-poly
-  4. Normal map applied to material
-  5. High-poly reference deleted
-
-### Material Optimization
-- Removes duplicate materials by name
-- Consolidates material slots
-- Preserves texture references
-
-### Texture Consolidation
-- **Duplicate Detection**: MD5 hash comparison
-- **Conflict Resolution**: Automatic renaming (texture_1.png, texture_2.png)
-- **Supported Formats**: PNG, JPG, JPEG, TGA, BMP, TIFF, DDS
-
-## 📈 Performance
-
-### Typical Processing Times
-
-| Dataset Size | Files | Step 1 (32 cores) | Step 2 | Total |
-|--------------|-------|-------------------|--------|-------|
-| Small | 100 | 5-10 min | 2 min | 7-12 min |
-| Medium | 500 | 15-30 min | 5 min | 20-35 min |
-| Large | 2000+ | 1-2 hours | 15 min | 1.5-2.5 hrs |
-
-*Times vary based on CPU, file complexity, and quality settings*
-
-### Performance Optimization Tips
-
-1. **Use all CPU cores**: Set `maxParallelBlenderInstances` to your core count × 2
-2. **SSD storage**: Run from SSD for 2-3x faster I/O
-3. **Batch size tuning**: 
-   - More cores → Increase `FilesPerBatch`
-   - Low RAM → Decrease `FilesPerBatch`
-4. **Skip redundant steps**: Use `-SkipTextureConsolidation` if already done
-
-## 🔍 Troubleshooting
-
-### "No GLTF files found"
-- Verify files are named `*_LOD00.gltf`
-- Check `modelLib` directory path in config
-
-### "Blender executable not found"
-- Update `blenderExecutable` path in `config.json`
-- Ensure Blender is installed
-
-### "Out of memory" errors
-- Reduce `FilesPerBatch` (try 5 or lower)
-- Reduce `maxParallelBlenderInstances`
-- Close other applications
-
-### Texture paths broken
-- Run Step 0.5 texture consolidation
-- Ensure textures are in `modelLib` root, not subfolders
-
-### Slow processing
-- Check CPU usage (should be near 100% during Step 1)
-- Verify using SSD storage
-- Increase `FilesPerBatch` if CPU underutilized
-
-## 📝 Configuration Reference
-
-### `config.json` Structure
-
-```json
+```jsonc
 {
   "paths": {
     "projectRoot": "D:\\Projects\\google_earth_export\\",
     "blenderExecutable": "D:\\Program Files\\Blender 5.0\\blender.exe"
   },
+  "folders": {
+    "gltfExport":        "gltf_export",
+    "modelLib":          "gltf_export\\modelLib",
+    "modelLibTextures":  "gltf_export\\modelLib\\texture",
+    "batchFbxOutput":   "gltf_export\\batch_fbx",
+    "mergedOutput":     "gltf_export\\merged"
+  },
+  "scripts": {
+    "mergeGltfBatchOptimized": "merge_gltf_batch_optimized.py",
+    "mergeFinalFbx":           "merge_final_fbx.py",
+    "processGltfParallel":     "process_gltf_parallel.ps1",
+    "runFullPipeline":         "run_full_pipeline.ps1"
+  },
+  "output": {
+    "mergedFbxName": "merged.fbx"
+  },
   "processing": {
-    "maxParallelBlenderInstances": 32,    // Concurrent Blender processes
-    "processCheckIntervalMs": 200,        // Job polling interval
-    "defaultFilesPerBatch": 10,           // Default batch size
-    "defaultDecimateRatio": 0.5,          // Default decimation
-    "cleanupSubfolders": true             // Remove empty dirs after consolidation
+    "maxParallelBlenderInstances": 32,   // How many Blender processes run simultaneously
+    "processCheckIntervalMs":      200,  // How often to poll for finished processes (ms)
+    "defaultFilesPerBatch":        10,   // GLTF files per Blender instance
+    "defaultDecimateRatio":        0.5,  // Polygon reduction (0.1 = aggressive, 0.9 = minimal)
+    "cleanupSubfolders":           true  // Remove empty texture/ dir after consolidation
   },
   "optimization": {
-    "enableDecimation": true,             // Enable mesh decimation
-    "enableNormalBaking": true,           // Enable normal map baking
-    "normalMapResolution": 2048,          // Normal map size
-    "bakeCageExtrusion": 0.1,             // Bake cage offset
-    "bakeMaxRayDistance": 1.0             // Max ray distance for baking
+    "enableDecimation":    true,
+    "enableNormalBaking":  true,
+    "normalMapResolution": 2048,   // Width & height of baked normal maps in pixels
+    "bakeCageExtrusion":   0.1,    // Blender bake cage extrusion distance
+    "bakeMaxRayDistance":  1.0     // Blender bake max ray distance
   },
   "options": {
-    "cleanOutputFolders": false,          // Delete previous outputs
-    "verboseLogging": true,               // Detailed console output
-    "saveBatchLogs": true,                // Save process logs
-    "removeHighPolyAfterBake": true       // Delete high-poly after baking
+    "cleanOutputFolders":       false,  // Delete batch_fbx/ and merged/ before each run
+    "verboseLogging":           true,
+    "saveBatchLogs":            true,   // Save .log and .err per batch
+    "removeHighPolyAfterBake":  true    // Delete high-poly duplicate after normal baking
   }
 }
 ```
 
-## 🎯 Common Workflows
+---
 
-### First Time Setup
+## Running Without the GUI
+
+You can invoke the pipeline directly from PowerShell:
+
 ```powershell
-# 1. Download map tiles with earth2msfs
-# 2. Edit config.json with your paths
-# 3. Run full pipeline with default settings
-.\run_full_pipeline.ps1
-# 4. Import merged.fbx into 3ds Max as reference
+# Full pipeline with defaults
+.\run_full_pipeline.ps1 -ConfigPath config.json
+
+# Custom batch size and quality
+.\run_full_pipeline.ps1 -ConfigPath config.json -FilesPerBatch 5 -DecimateRatio 0.7
+
+# Skip batch processing (re-merge existing batches)
+.\run_full_pipeline.ps1 -ConfigPath config.json -SkipBatchProcessing
+
+# Final merge only
+.\run_full_pipeline.ps1 -ConfigPath config.json -OnlyFinalMerge
+
+# Batch processing only (no final merge)
+.\process_gltf_parallel.ps1 -ConfigPath config.json -FilesPerBatch 10 -DecimateRatio 0.5
 ```
 
-### Re-process with Different Quality
-```powershell
-# Use existing batches, just re-merge with different settings
-.\run_full_pipeline.ps1 -SkipBatchProcessing -OnlyFinalMerge
-```
+---
 
-### Process New Textures Only
-```powershell
-# Only consolidate textures, skip processing
-.\run_full_pipeline.ps1 -SkipBatchProcessing -OnlyFinalMerge
-```
+## Threading Model
 
-### Maximum Quality Reference for Architectural Work
-```powershell
-# Ultra-high quality for detailed modeling reference
-.\run_full_pipeline.ps1 -FilesPerBatch 3 -DecimateRatio 0.95
-```
+The GUI uses four threads to stay responsive at all times:
 
-### Quick Layout Reference
-```powershell
-# Fast low-quality for viewport layout and planning
-.\run_full_pipeline.ps1 -FilesPerBatch 50 -DecimateRatio 0.1
-```
+| Thread | Responsibility |
+|---|---|
+| **UI thread** | Tkinter mainloop — never blocked |
+| **Pipeline thread** | Launches `run_full_pipeline.ps1` via `subprocess.Popen` |
+| **Stdout reader** | Streams lines from the process into a `queue.Queue` |
+| **Monitor watcher** | Polls the batch output directory every 3 seconds (optional) |
 
-## 📦 File Descriptions
+The UI thread drains the queue every 50 ms with `after()`, so console output appears in real time without freezing the interface.
 
-| File | Purpose |
-|------|---------|
-| `config.json` | Main configuration file |
-| `run_full_pipeline.ps1` | Master orchestration script |
-| `process_gltf_parallel.ps1` | Parallel batch processor |
-| `merge_gltf_batch_optimized.py` | Blender batch optimization script |
-| `merge_final_fbx.py` | Blender final merge script |
+---
 
-## ⚠️ Important Notes
+## Troubleshooting
 
-- **Backup your data**: Always keep original GLTF files
-- **Reference model**: The final FBX is meant for reference, not direct game/production use
-- **Manual modeling**: Use the merged FBX as a guide to create optimized models in 3ds Max
-- **Texture paths**: Pipeline expects textures in `modelLib` or `modelLib\texture`
-- **GLTF naming**: Files must end with `_LOD00.gltf` to be processed
-- **Embedded textures**: Final FBX embeds all textures (increases file size but simplifies import)
-- **Progress monitoring**: Watch console for real-time progress updates
+**"Blender executable not found"**
+Check the `blenderExecutable` path in config. Use the full absolute path including the `.exe` extension.
 
-## 🤝 Support
+**"No GLTF files found"**
+GLTF files must match the pattern `*_LOD00.gltf` and be placed directly in `modelLib\` (not in subdirectories).
 
-For issues or questions:
-1. Check troubleshooting section above
-2. Review log files in `batch_fbx\batch_*.log`
-3. Verify config.json paths are correct
-4. Ensure sufficient disk space and memory
+**Pipeline stops with exit code 1**
+Check the `.err` files in `batch_fbx\` — they contain Blender's stderr for the failing batch. Common causes: out of memory (reduce `filesPerBatch`), corrupted GLTF, missing texture directory.
 
-## 📄 License
+**Normal baking is very slow**
+Normal baking uses Cycles, which is GPU-accelerated. Make sure Blender's preferences have your GPU selected under **Edit → Preferences → System → Cycles Render Devices**. Alternatively, disable `enableNormalBaking` in config for faster runs without baked normals.
 
-This pipeline is provided as-is for processing Google Earth Studio exports into 3ds Max reference models.
+**Too many parallel Blender instances**
+Each Blender instance loads all GLTF meshes into memory. If you hit RAM limits, reduce `maxParallelBlenderInstances` (try 4–8) and/or reduce `defaultFilesPerBatch`.
+
+**Scrolling jumps to top/bottom in the GUI**
+This was a known bug (fixed): multiple widgets catching the same scroll event simultaneously. If it recurs, hover directly over the scrollbar and drag instead.
+
+---
+
+## License
+
+MIT — do whatever you want with it.

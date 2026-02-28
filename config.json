@@ -8,7 +8,11 @@
     "modelLib": "gltf_export\\modelLib",
     "modelLibTextures": "gltf_export\\modelLib\\texture",
     "batchFbxOutput": "gltf_export\\batch_fbx",
+<<<<<<< HEAD
+    "mergedOutput": "output"
+=======
     "mergedOutput": "gltf_export\\merged"
+>>>>>>> 2f5766fc6c0e717523628785da5bcc725fc79ed6
   },
   "scripts": {
     "mergeGltfBatchOptimized": "merge_gltf_batch_optimized.py",
@@ -17,12 +21,20 @@
     "runFullPipeline": "run_full_pipeline.ps1"
   },
   "output": {
+<<<<<<< HEAD
+    "mergedFbxName": "paca_stadium.fbx"
+=======
     "mergedFbxName": "merged.fbx"
+>>>>>>> 2f5766fc6c0e717523628785da5bcc725fc79ed6
   },
   "processing": {
     "maxParallelBlenderInstances": 32,
     "processCheckIntervalMs": 200,
+<<<<<<< HEAD
+    "defaultFilesPerBatch": 20,
+=======
     "defaultFilesPerBatch": 10,
+>>>>>>> 2f5766fc6c0e717523628785da5bcc725fc79ed6
     "defaultDecimateRatio": 0.5,
     "cleanupSubfolders": true
   },
@@ -68,4 +80,8 @@
       }
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2f5766fc6c0e717523628785da5bcc725fc79ed6
